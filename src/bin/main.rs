@@ -187,10 +187,10 @@ fn main() {
 
         match evt {
             Event::Key(Key::Char('u')) => {
-                state.rotate_tm(Rotate::l);
+                state.rotate_tm(Rotate::r);
             }
             Event::Key(Key::Char('i')) => {
-                state.rotate_tm(Rotate::r);
+                state.rotate_tm(Rotate::l);
             }
             Event::Key(Key::Char('j')) => {
                 state.down();
