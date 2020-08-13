@@ -1,7 +1,7 @@
 pub struct Tetrimino {
-  w: usize,
-  h: usize,
-  block: Vec<Vec<bool>>,
+  pub w: usize,
+  pub h: usize,
+  pub block: Vec<Vec<bool>>,
 }
 
 impl Tetrimino {
