@@ -18,6 +18,13 @@ struct Position {
 
 type Stage = [[bool; STAGE_WIDTH - 1]; STAGE_HEIGHT - 1];
 
+enum Tm_Direction {
+    head,
+    right,
+    bottom,
+    left,
+}
+
 struct Display {
     // ステージの状態
     // テトリミノは含まない
@@ -28,6 +35,7 @@ struct Display {
     tm: Option<tetrimino::Tetrimino>,
     // 現在のテトリミノの位置
     tm_position: Position,
+    tm_direction: Tm_Direction,
 }
 
 impl Default for Display {
@@ -38,8 +46,14 @@ impl Default for Display {
             filled_block: String::from("■"),
             tm_position: Position { top: 0, left: 0 },
             tm: None,
+            tm_direction: Tm_Direction::head,
         }
     }
+}
+
+enum Rotate {
+    r,
+    l,
 }
 
 impl Display {
@@ -47,15 +61,46 @@ impl Display {
         write!(out, "{}", clear::All);
         write!(out, "{}", cursor::Goto(1, 1));
         let mut calc_stage = self.stage;
-        match &self.tm {
-            Some(tm) => {
-                for (r, line) in tm.block.iter().enumerate() {
-                    for (c, v) in line.iter().enumerate() {
-                        calc_stage[r + self.tm_position.top][c + self.tm_position.left] = *v;
+        if let Some(tm) = &self.tm {
+            match &self.tm_direction {
+                Tm_Direction::head => {
+                    for (r, line) in tm.block.iter().enumerate() {
+                        for (c, v) in line.iter().enumerate() {
+                            calc_stage[r + self.tm_position.top][c + self.tm_position.left] = *v;
+                        }
+                    }
+                }
+                Tm_Direction::right => {
+                    // let w = &tm.w;
+                    let h = &tm.h;
+                    for (t, line) in tm.block.iter().enumerate() {
+                        for (l, v) in line.iter().enumerate() {
+                            calc_stage[self.tm_position.top + l][self.tm_position.left + h - t] =
+                                *v;
+                        }
+                    }
+                }
+                Tm_Direction::bottom => {
+                    let w = &tm.w;
+                    let h = &tm.h;
+                    for (t, line) in tm.block.iter().enumerate() {
+                        for (l, v) in line.iter().enumerate() {
+                            calc_stage[self.tm_position.top + h - t]
+                                [self.tm_position.left + w - l] = *v;
+                        }
+                    }
+                }
+                Tm_Direction::left => {
+                    let w = &tm.w;
+                    // let h = &tm.h;
+                    for (t, line) in tm.block.iter().enumerate() {
+                        for (l, v) in line.iter().enumerate() {
+                            calc_stage[self.tm_position.top + w - l][self.tm_position.left + t] =
+                                *v;
+                        }
                     }
                 }
             }
-            None => {}
         }
 
         for line in &calc_stage {
@@ -81,12 +126,50 @@ impl Display {
         }
     }
     fn down(&mut self) {
-        match &self.tm {
-            Some(tm) => {
-                if &self.tm_position.top + tm.h < (STAGE_HEIGHT - 1) {}
-                self.tm_position.top += 1;
+        if let Some(tm) = &self.tm {
+            if &self.tm_position.top + tm.h < (STAGE_HEIGHT - 1) {}
+            self.tm_position.top += 1;
+        }
+    }
+    fn rotate_tm(&mut self, direction: Rotate) {
+        let mut deg = match self.tm_direction {
+            Tm_Direction::head => 0,
+            Tm_Direction::right => 1,
+            Tm_Direction::bottom => 2,
+            Tm_Direction::left => 3,
+        };
+        match direction {
+            Rotate::r => {
+                deg -= 1;
+                if &deg == &-1 {
+                    deg = 3;
+                }
             }
-            None => {}
+            Rotate::l => {
+                deg += 1;
+                if &deg == &5 {
+                    deg = 0;
+                }
+            }
+        }
+        if let Some(_tm) = &self.tm {
+            match deg {
+                0 => {
+                    self.tm_direction = Tm_Direction::head;
+                }
+                1 => {
+                    self.tm_direction = Tm_Direction::right;
+                }
+                2 => {
+                    self.tm_direction = Tm_Direction::bottom;
+                }
+                3 => {
+                    self.tm_direction = Tm_Direction::left;
+                }
+                _ => {
+                    self.tm_direction = Tm_Direction::head;
+                }
+            }
         }
     }
 }
@@ -104,10 +187,10 @@ fn main() {
 
         match evt {
             Event::Key(Key::Char('u')) => {
-                write!(stdout, "kaiten-h");
+                state.rotate_tm(Rotate::l);
             }
             Event::Key(Key::Char('i')) => {
-                write!(stdout, "kaiten-m");
+                state.rotate_tm(Rotate::r);
             }
             Event::Key(Key::Char('j')) => {
                 state.down();
