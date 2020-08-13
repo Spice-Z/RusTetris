@@ -11,20 +11,23 @@ use termion::raw::IntoRawMode;
 
 const STAGE_WIDTH: usize = 10;
 const STAGE_HEIGHT: usize = 20;
-struct Cursor {
-    row: usize,
-    column: usize,
+struct Position {
+    top: usize,
+    left: usize,
 }
 
 type Stage = [[bool; STAGE_WIDTH - 1]; STAGE_HEIGHT - 1];
 
 struct Display {
     // ステージの状態
+    // テトリミノは含まない
     stage: Stage,
     empty_block: String,
     filled_block: String,
-    // 現在のカーソルの位置
-    cursor: Cursor,
+    // 現在操作中のテトリミノ
+    tm: Option<tetrimino::Tetrimino>,
+    // 現在のテトリミノの位置
+    tm_position: Position,
 }
 
 impl Default for Display {
@@ -33,16 +36,29 @@ impl Default for Display {
             stage: [[false; STAGE_WIDTH - 1]; STAGE_HEIGHT - 1],
             empty_block: String::from("･"),
             filled_block: String::from("■"),
-            cursor: Cursor { row: 0, column: 0 },
+            tm_position: Position { top: 0, left: 0 },
+            tm: None,
         }
     }
 }
 
 impl Display {
-    fn draw<T: Write>(&self, out: &mut T) {
+    fn draw<T: Write>(&mut self, out: &mut T) {
         write!(out, "{}", clear::All);
         write!(out, "{}", cursor::Goto(1, 1));
-        for line in &self.stage {
+        let mut calc_stage = self.stage;
+        match &self.tm {
+            Some(tm) => {
+                for (r, line) in tm.block.iter().enumerate() {
+                    for (c, v) in line.iter().enumerate() {
+                        calc_stage[r + self.tm_position.top][c + self.tm_position.left] = *v;
+                    }
+                }
+            }
+            None => {}
+        }
+
+        for line in &calc_stage {
             for i in line {
                 if *i {
                     write!(out, "{}", &self.filled_block);
@@ -54,16 +70,24 @@ impl Display {
         }
     }
     fn insert_tm(&mut self, tm: tetrimino::Tetrimino) {
-        // TODO:計算の前に描画可能か判定
-        self.cursor.row = 0;
-        self.cursor.column = 3;
-        let mut new_stage = self.stage;
-        for (r, line) in tm.block.iter().enumerate() {
-            for (c, v) in line.iter().enumerate() {
-                new_stage[r + self.cursor.row][c + self.cursor.column] = *v;
-            }
+        self.tm = Some(tm);
+        self.tm_position.top = 0;
+        self.tm_position.left = 3;
+    }
+    fn move_w(&mut self, w: i32) {
+        let left = *&self.tm_position.left as i32;
+        if 0 <= left + w && left + w <= (STAGE_WIDTH - 1) as i32 {
+            self.tm_position.left = (left + w) as usize;
         }
-        self.stage = new_stage;
+    }
+    fn down(&mut self) {
+        match &self.tm {
+            Some(tm) => {
+                if &self.tm_position.top + tm.h < (STAGE_HEIGHT - 1) {}
+                self.tm_position.top += 1;
+            }
+            None => {}
+        }
     }
 }
 
@@ -72,7 +96,6 @@ fn main() {
     let stdin = stdin();
     // let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
     let mut stdout = stdout().into_raw_mode().unwrap();
-    state.draw(&mut stdout);
     state.insert_tm(tetrimino::Tetrimino::j_tetrimino());
     state.draw(&mut stdout);
 
@@ -87,16 +110,16 @@ fn main() {
                 write!(stdout, "kaiten-m");
             }
             Event::Key(Key::Char('j')) => {
-                write!(stdout, "sita");
+                state.down();
             }
             Event::Key(Key::Char('k')) => {
                 write!(stdout, "ue");
             }
             Event::Key(Key::Char('l')) => {
-                write!(stdout, "migi");
+                state.move_w(1);
             }
             Event::Key(Key::Char('h')) => {
-                write!(stdout, "hidari");
+                state.move_w(-1);
             }
             // Ctrl-cで終了
             Event::Key(Key::Ctrl('c')) => {
@@ -104,5 +127,6 @@ fn main() {
             }
             _ => {}
         }
+        state.draw(&mut stdout);
     }
 }
