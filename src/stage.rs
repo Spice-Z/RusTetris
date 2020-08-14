@@ -93,7 +93,9 @@ impl Stage {
                 Tm_Direction::head => {
                     for (r, line) in tm.block.iter().enumerate() {
                         for (c, v) in line.iter().enumerate() {
-                            area[r + self.tm_position.top][c + self.tm_position.left] = *v;
+                            if *v {
+                                area[r + self.tm_position.top][c + self.tm_position.left] = *v;
+                            }
                         }
                     }
                 }
@@ -101,8 +103,10 @@ impl Stage {
                     let min_len = if &tm.w > &tm.h { &tm.h } else { &tm.w };
                     for (t, line) in tm.block.iter().enumerate() {
                         for (l, v) in line.iter().enumerate() {
-                            area[self.tm_position.top + l]
-                                [self.tm_position.left + min_len - 1 - t] = *v;
+                            if *v {
+                                area[self.tm_position.top + l]
+                                    [self.tm_position.left + min_len - 1 - t] = *v;
+                            }
                         }
                     }
                 }
@@ -111,8 +115,10 @@ impl Stage {
                     let h = &tm.h;
                     for (t, line) in tm.block.iter().enumerate() {
                         for (l, v) in line.iter().enumerate() {
-                            area[self.tm_position.top + h - 1 - t]
-                                [self.tm_position.left + w - 1 - l] = *v;
+                            if *v {
+                                area[self.tm_position.top + h - 1 - t]
+                                    [self.tm_position.left + w - 1 - l] = *v;
+                            }
                         }
                     }
                 }
@@ -120,8 +126,10 @@ impl Stage {
                     let max_len = if &tm.w > &tm.h { &tm.w } else { &tm.h };
                     for (t, line) in tm.block.iter().enumerate() {
                         for (l, v) in line.iter().enumerate() {
-                            area[self.tm_position.top + max_len - 1 - l]
-                                [self.tm_position.left + t] = *v;
+                            if *v {
+                                area[self.tm_position.top + max_len - 1 - l]
+                                    [self.tm_position.left + t] = *v;
+                            }
                         }
                     }
                 }
