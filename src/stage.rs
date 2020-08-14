@@ -7,6 +7,8 @@ const STAGE_WIDTH: usize = 10;
 const STAGE_HEIGHT: usize = 20;
 pub struct Position {
     top: usize,
+    right: usize,
+    bottom: usize,
     left: usize,
 }
 
@@ -17,6 +19,13 @@ pub enum Tm_Direction {
     right,
     bottom,
     left,
+}
+
+struct TM_Hit {
+    top: bool,
+    right: bool,
+    bottom: bool,
+    left: bool,
 }
 
 pub struct Stage {
@@ -38,7 +47,12 @@ impl Default for Stage {
             area: [[false; STAGE_WIDTH]; STAGE_HEIGHT],
             empty_block: String::from("･"),
             filled_block: String::from("■"),
-            tm_position: Position { top: 0, left: 0 },
+            tm_position: Position {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+            },
             tm: None,
             tm_direction: Tm_Direction::head,
         }
@@ -110,17 +124,35 @@ impl Stage {
         self.tm = Some(tm);
         self.tm_position.top = 0;
         self.tm_position.left = 3;
+        if let Some(tm) = &self.tm {
+            self.tm_position.right = self.tm_position.left + &tm.w;
+            self.tm_position.bottom = self.tm_position.top + &tm.h;
+        }
     }
     pub fn move_w(&mut self, w: i32) {
+        if w < 0 && self.tm_position.left == 0 {
+            return;
+        }
+        if w > 0 && self.tm_position.right == STAGE_WIDTH {
+            return;
+        }
         let left = *&self.tm_position.left as i32;
+        let right = *&self.tm_position.right as i32;
         if 0 <= left + w && left + w <= (STAGE_WIDTH) as i32 {
             self.tm_position.left = (left + w) as usize;
+            self.tm_position.right = (right + w) as usize;
         }
     }
     pub fn down(&mut self) {
+        if self.tm_position.bottom == STAGE_HEIGHT {
+            // self.next()
+            return;
+        }
+
         if let Some(tm) = &self.tm {
             if &self.tm_position.top + tm.h < (STAGE_HEIGHT) {}
             self.tm_position.top += 1;
+            self.tm_position.bottom += 1;
         }
     }
     pub fn rotate_tm(&mut self, direction: Rotate) {
