@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Tetrimino {
   pub w: usize,
   pub h: usize,

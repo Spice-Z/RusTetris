@@ -6,13 +6,12 @@ use std::io::{stdin, stdout, Write};
 use termion::event::{Event, Key};
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
-// use termion::screen::AlternateScreen;
+use termion::screen::AlternateScreen;
 
 fn main() {
     let mut stage = stage::Stage::default();
     let stdin = stdin();
-    // let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
-    let mut stdout = stdout().into_raw_mode().unwrap();
+    let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
     stage.insert_tm(tetrimino::Tetrimino::l_tetrimino());
     stage.draw(&mut stdout);
 

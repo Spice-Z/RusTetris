@@ -5,6 +5,8 @@ use termion::cursor;
 
 const STAGE_WIDTH: usize = 10;
 const STAGE_HEIGHT: usize = 20;
+
+#[derive(Debug)]
 pub struct Position {
     top: usize,
     right: usize,
@@ -14,6 +16,7 @@ pub struct Position {
 
 type Area = [[bool; STAGE_WIDTH]; STAGE_HEIGHT];
 
+#[derive(Debug)]
 pub enum Tm_Direction {
     head,
     right,
@@ -28,6 +31,7 @@ struct TM_Hit {
     left: bool,
 }
 
+#[derive(Debug)]
 pub struct Stage {
     // ステージの状態
     // テトリミノは含まない
@@ -66,50 +70,12 @@ pub enum Rotate {
 
 impl Stage {
     pub fn draw<T: Write>(&mut self, out: &mut T) {
+        let calc_area = self.calc_area();
+
         write!(out, "{}", clear::All);
         write!(out, "{}", cursor::Goto(1, 1));
-        let mut calc_stage = self.area;
-        if let Some(tm) = &self.tm {
-            match &self.tm_direction {
-                Tm_Direction::head => {
-                    for (r, line) in tm.block.iter().enumerate() {
-                        for (c, v) in line.iter().enumerate() {
-                            calc_stage[r + self.tm_position.top][c + self.tm_position.left] = *v;
-                        }
-                    }
-                }
-                Tm_Direction::right => {
-                    let min_len = if &tm.w > &tm.h { &tm.h } else { &tm.w };
-                    for (t, line) in tm.block.iter().enumerate() {
-                        for (l, v) in line.iter().enumerate() {
-                            calc_stage[self.tm_position.top + l]
-                                [self.tm_position.left + min_len - 1 - t] = *v;
-                        }
-                    }
-                }
-                Tm_Direction::bottom => {
-                    let w = &tm.w;
-                    let h = &tm.h;
-                    for (t, line) in tm.block.iter().enumerate() {
-                        for (l, v) in line.iter().enumerate() {
-                            calc_stage[self.tm_position.top + h - 1 - t]
-                                [self.tm_position.left + w - 1 - l] = *v;
-                        }
-                    }
-                }
-                Tm_Direction::left => {
-                    let max_len = if &tm.w > &tm.h { &tm.w } else { &tm.h };
-                    for (t, line) in tm.block.iter().enumerate() {
-                        for (l, v) in line.iter().enumerate() {
-                            calc_stage[self.tm_position.top + max_len - 1 - l]
-                                [self.tm_position.left + t] = *v;
-                        }
-                    }
-                }
-            }
-        }
 
-        for line in &calc_stage {
+        for line in &calc_area {
             for i in line {
                 if *i {
                     write!(out, "{}", &self.filled_block);
@@ -120,8 +86,52 @@ impl Stage {
             write!(out, "\r\n");
         }
     }
+    fn calc_area(&mut self) -> Area {
+        let mut area = self.area;
+        if let Some(tm) = &self.tm {
+            match &self.tm_direction {
+                Tm_Direction::head => {
+                    for (r, line) in tm.block.iter().enumerate() {
+                        for (c, v) in line.iter().enumerate() {
+                            area[r + self.tm_position.top][c + self.tm_position.left] = *v;
+                        }
+                    }
+                }
+                Tm_Direction::right => {
+                    let min_len = if &tm.w > &tm.h { &tm.h } else { &tm.w };
+                    for (t, line) in tm.block.iter().enumerate() {
+                        for (l, v) in line.iter().enumerate() {
+                            area[self.tm_position.top + l]
+                                [self.tm_position.left + min_len - 1 - t] = *v;
+                        }
+                    }
+                }
+                Tm_Direction::bottom => {
+                    let w = &tm.w;
+                    let h = &tm.h;
+                    for (t, line) in tm.block.iter().enumerate() {
+                        for (l, v) in line.iter().enumerate() {
+                            area[self.tm_position.top + h - 1 - t]
+                                [self.tm_position.left + w - 1 - l] = *v;
+                        }
+                    }
+                }
+                Tm_Direction::left => {
+                    let max_len = if &tm.w > &tm.h { &tm.w } else { &tm.h };
+                    for (t, line) in tm.block.iter().enumerate() {
+                        for (l, v) in line.iter().enumerate() {
+                            area[self.tm_position.top + max_len - 1 - l]
+                                [self.tm_position.left + t] = *v;
+                        }
+                    }
+                }
+            }
+        }
+        area
+    }
     pub fn insert_tm(&mut self, tm: tetrimino::Tetrimino) {
         self.tm = Some(tm);
+        self.tm_direction = Tm_Direction::head;
         self.tm_position.top = 0;
         self.tm_position.left = 3;
         if let Some(tm) = &self.tm {
@@ -145,7 +155,8 @@ impl Stage {
     }
     pub fn down(&mut self) {
         if self.tm_position.bottom == STAGE_HEIGHT {
-            // self.next()
+            self.area = self.calc_area();
+            self.next();
             return;
         }
 
@@ -154,6 +165,9 @@ impl Stage {
             self.tm_position.top += 1;
             self.tm_position.bottom += 1;
         }
+    }
+    fn next(&mut self) {
+        self.insert_tm(tetrimino::Tetrimino::l_tetrimino());
     }
     pub fn rotate_tm(&mut self, direction: Rotate) {
         let mut deg = match self.tm_direction {
@@ -176,22 +190,57 @@ impl Stage {
                 }
             }
         }
-        if let Some(_tm) = &self.tm {
+        if let Some(tm) = &self.tm {
             match deg {
                 0 => {
+                    if &self.tm_position.left + &tm.w > STAGE_WIDTH
+                        || &self.tm_position.top + &tm.h > STAGE_HEIGHT
+                    {
+                        return;
+                    }
                     self.tm_direction = Tm_Direction::head;
+                    self.tm_position.right = &self.tm_position.left + &tm.w;
+                    self.tm_position.bottom = &self.tm_position.top + &tm.h;
                 }
                 1 => {
+                    if &self.tm_position.left + &tm.h > STAGE_WIDTH
+                        || &self.tm_position.top + &tm.w > STAGE_HEIGHT
+                    {
+                        return;
+                    }
                     self.tm_direction = Tm_Direction::right;
+                    self.tm_position.right = &self.tm_position.left + &tm.h;
+                    self.tm_position.bottom = &self.tm_position.top + &tm.w;
                 }
                 2 => {
+                    if &self.tm_position.left + &tm.w > STAGE_WIDTH
+                        || &self.tm_position.top + &tm.h > STAGE_HEIGHT
+                    {
+                        return;
+                    }
                     self.tm_direction = Tm_Direction::bottom;
+                    self.tm_position.right = &self.tm_position.left + &tm.w;
+                    self.tm_position.bottom = &self.tm_position.top + &tm.h;
                 }
                 3 => {
+                    if &self.tm_position.left + &tm.h > STAGE_WIDTH
+                        || &self.tm_position.top + &tm.w > STAGE_HEIGHT
+                    {
+                        return;
+                    }
                     self.tm_direction = Tm_Direction::left;
+                    self.tm_position.right = &self.tm_position.left + &tm.h;
+                    self.tm_position.bottom = &self.tm_position.top + &tm.w;
                 }
                 _ => {
+                    if &self.tm_position.left + &tm.w > STAGE_WIDTH
+                        || &self.tm_position.top + &tm.h > STAGE_HEIGHT
+                    {
+                        return;
+                    }
                     self.tm_direction = Tm_Direction::head;
+                    self.tm_position.right = &self.tm_position.left + &tm.w;
+                    self.tm_position.bottom = &self.tm_position.top + &tm.h;
                 }
             }
         }
