@@ -10,7 +10,7 @@ pub struct Position {
     left: usize,
 }
 
-type Area = [[bool; STAGE_WIDTH - 1]; STAGE_HEIGHT - 1];
+type Area = [[bool; STAGE_WIDTH]; STAGE_HEIGHT];
 
 pub enum Tm_Direction {
     head,
@@ -35,7 +35,7 @@ pub struct Stage {
 impl Default for Stage {
     fn default() -> Self {
         Stage {
-            area: [[false; STAGE_WIDTH - 1]; STAGE_HEIGHT - 1],
+            area: [[false; STAGE_WIDTH]; STAGE_HEIGHT],
             empty_block: String::from("･"),
             filled_block: String::from("■"),
             tm_position: Position { top: 0, left: 0 },
@@ -65,12 +65,11 @@ impl Stage {
                     }
                 }
                 Tm_Direction::right => {
-                    // let w = &tm.w;
-                    let h = &tm.h;
+                    let min_len = if &tm.w > &tm.h { &tm.h } else { &tm.w };
                     for (t, line) in tm.block.iter().enumerate() {
                         for (l, v) in line.iter().enumerate() {
-                            calc_stage[self.tm_position.top + l][self.tm_position.left + h - t] =
-                                *v;
+                            calc_stage[self.tm_position.top + l]
+                                [self.tm_position.left + min_len - 1 - t] = *v;
                         }
                     }
                 }
@@ -79,18 +78,17 @@ impl Stage {
                     let h = &tm.h;
                     for (t, line) in tm.block.iter().enumerate() {
                         for (l, v) in line.iter().enumerate() {
-                            calc_stage[self.tm_position.top + h - t]
-                                [self.tm_position.left + w - l] = *v;
+                            calc_stage[self.tm_position.top + h - 1 - t]
+                                [self.tm_position.left + w - 1 - l] = *v;
                         }
                     }
                 }
                 Tm_Direction::left => {
-                    let w = &tm.w;
-                    // let h = &tm.h;
+                    let max_len = if &tm.w > &tm.h { &tm.w } else { &tm.h };
                     for (t, line) in tm.block.iter().enumerate() {
                         for (l, v) in line.iter().enumerate() {
-                            calc_stage[self.tm_position.top + w - l][self.tm_position.left + t] =
-                                *v;
+                            calc_stage[self.tm_position.top + max_len - 1 - l]
+                                [self.tm_position.left + t] = *v;
                         }
                     }
                 }
@@ -115,13 +113,13 @@ impl Stage {
     }
     pub fn move_w(&mut self, w: i32) {
         let left = *&self.tm_position.left as i32;
-        if 0 <= left + w && left + w <= (STAGE_WIDTH - 1) as i32 {
+        if 0 <= left + w && left + w <= (STAGE_WIDTH) as i32 {
             self.tm_position.left = (left + w) as usize;
         }
     }
     pub fn down(&mut self) {
         if let Some(tm) = &self.tm {
-            if &self.tm_position.top + tm.h < (STAGE_HEIGHT - 1) {}
+            if &self.tm_position.top + tm.h < (STAGE_HEIGHT) {}
             self.tm_position.top += 1;
         }
     }

@@ -13,7 +13,7 @@ fn main() {
     let stdin = stdin();
     // let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
     let mut stdout = stdout().into_raw_mode().unwrap();
-    stage.insert_tm(tetrimino::Tetrimino::j_tetrimino());
+    stage.insert_tm(tetrimino::Tetrimino::l_tetrimino());
     stage.draw(&mut stdout);
 
     for evt in stdin.events() {
