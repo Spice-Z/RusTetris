@@ -1,4 +1,5 @@
 use super::tetrimino;
+use rand::prelude::*;
 use std::io::Write;
 use termion::clear;
 use termion::cursor;
@@ -203,7 +204,17 @@ impl Stage {
     }
     fn next(&mut self) {
         self.area = self.area_state;
-        self.insert_tm(tetrimino::Tetrimino::l_tetrimino());
+        let rand = rand::random::<u8>();
+        match rand % 7 {
+            0 => self.insert_tm(tetrimino::Tetrimino::i_tetrimino()),
+            1 => self.insert_tm(tetrimino::Tetrimino::o_tetrimino()),
+            2 => self.insert_tm(tetrimino::Tetrimino::s_tetrimino()),
+            3 => self.insert_tm(tetrimino::Tetrimino::z_tetrimino()),
+            4 => self.insert_tm(tetrimino::Tetrimino::j_tetrimino()),
+            5 => self.insert_tm(tetrimino::Tetrimino::l_tetrimino()),
+            6 => self.insert_tm(tetrimino::Tetrimino::t_tetrimino()),
+            _ => self.insert_tm(tetrimino::Tetrimino::o_tetrimino()),
+        }
     }
     pub fn rotate_tm(&mut self, direction: Rotate) {
         let mut deg = match self.tm_direction {
