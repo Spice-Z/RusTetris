@@ -13,7 +13,7 @@ fn main() {
     let stdin = stdin();
     let mut stdout = AlternateScreen::from(stdout().into_raw_mode().unwrap());
     stage.insert_tm(tetrimino::Tetrimino::l_tetrimino());
-    stage.draw(&mut stdout);
+    stage.draw(&mut stdout, None);
 
     for evt in stdin.events() {
         let evt = evt.unwrap();
@@ -27,6 +27,7 @@ fn main() {
             }
             Event::Key(Key::Char('j')) => {
                 stage.down();
+                stage.draw(&mut stdout, Some(true));
             }
             Event::Key(Key::Char('k')) => {
                 write!(stdout, "ue");
@@ -43,6 +44,6 @@ fn main() {
             }
             _ => {}
         }
-        stage.draw(&mut stdout);
+        stage.draw(&mut stdout, None);
     }
 }

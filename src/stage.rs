@@ -33,9 +33,11 @@ struct TM_Hit {
 
 #[derive(Debug)]
 pub struct Stage {
-    // ステージの状態
+    // ステージ
     // テトリミノは含まない
     area: Area,
+    // テトリミノ含むstageの状態
+    area_state: Area,
     empty_block: String,
     filled_block: String,
     // 現在操作中のテトリミノ
@@ -49,6 +51,7 @@ impl Default for Stage {
     fn default() -> Self {
         Stage {
             area: [[false; STAGE_WIDTH]; STAGE_HEIGHT],
+            area_state: [[false; STAGE_WIDTH]; STAGE_HEIGHT],
             empty_block: String::from("･"),
             filled_block: String::from("■"),
             tm_position: Position {
@@ -69,24 +72,31 @@ pub enum Rotate {
 }
 
 impl Stage {
-    pub fn draw<T: Write>(&mut self, out: &mut T) {
-        let calc_area = self.calc_area();
-
-        write!(out, "{}", clear::All);
-        write!(out, "{}", cursor::Goto(1, 1));
-
-        for line in &calc_area {
-            for i in line {
-                if *i {
-                    write!(out, "{}", &self.filled_block);
-                } else {
-                    write!(out, "{}", &self.empty_block);
+    pub fn draw<T: Write>(&mut self, out: &mut T, next_flag: Option<bool>) {
+        match self.calc_area() {
+            Some(area) => {
+                self.area_state = area;
+                write!(out, "{}", clear::All);
+                write!(out, "{}", cursor::Goto(1, 1));
+                for line in &self.area_state {
+                    for i in line {
+                        if *i {
+                            write!(out, "{}", &self.filled_block);
+                        } else {
+                            write!(out, "{}", &self.empty_block);
+                        }
+                    }
+                    write!(out, "\r\n");
                 }
             }
-            write!(out, "\r\n");
+            None => {
+                if let Some(_f) = next_flag {
+                    self.next();
+                }
+            }
         }
     }
-    fn calc_area(&mut self) -> Area {
+    fn calc_area(&mut self) -> Option<Area> {
         let mut area = self.area;
         if let Some(tm) = &self.tm {
             match &self.tm_direction {
@@ -94,6 +104,9 @@ impl Stage {
                     for (r, line) in tm.block.iter().enumerate() {
                         for (c, v) in line.iter().enumerate() {
                             if *v {
+                                if area[r + self.tm_position.top][c + self.tm_position.left] {
+                                    return None;
+                                }
                                 area[r + self.tm_position.top][c + self.tm_position.left] = *v;
                             }
                         }
@@ -104,6 +117,11 @@ impl Stage {
                     for (t, line) in tm.block.iter().enumerate() {
                         for (l, v) in line.iter().enumerate() {
                             if *v {
+                                if area[self.tm_position.top + l]
+                                    [self.tm_position.left + min_len - 1 - t]
+                                {
+                                    return None;
+                                }
                                 area[self.tm_position.top + l]
                                     [self.tm_position.left + min_len - 1 - t] = *v;
                             }
@@ -116,6 +134,11 @@ impl Stage {
                     for (t, line) in tm.block.iter().enumerate() {
                         for (l, v) in line.iter().enumerate() {
                             if *v {
+                                if area[self.tm_position.top + h - 1 - t]
+                                    [self.tm_position.left + w - 1 - l]
+                                {
+                                    return None;
+                                }
                                 area[self.tm_position.top + h - 1 - t]
                                     [self.tm_position.left + w - 1 - l] = *v;
                             }
@@ -127,6 +150,11 @@ impl Stage {
                     for (t, line) in tm.block.iter().enumerate() {
                         for (l, v) in line.iter().enumerate() {
                             if *v {
+                                if area[self.tm_position.top + max_len - 1 - l]
+                                    [self.tm_position.left + t]
+                                {
+                                    return None;
+                                }
                                 area[self.tm_position.top + max_len - 1 - l]
                                     [self.tm_position.left + t] = *v;
                             }
@@ -135,7 +163,7 @@ impl Stage {
                 }
             }
         }
-        area
+        Some(area)
     }
     pub fn insert_tm(&mut self, tm: tetrimino::Tetrimino) {
         self.tm = Some(tm);
@@ -163,7 +191,6 @@ impl Stage {
     }
     pub fn down(&mut self) {
         if self.tm_position.bottom == STAGE_HEIGHT {
-            self.area = self.calc_area();
             self.next();
             return;
         }
@@ -175,6 +202,7 @@ impl Stage {
         }
     }
     fn next(&mut self) {
+        self.area = self.area_state;
         self.insert_tm(tetrimino::Tetrimino::l_tetrimino());
     }
     pub fn rotate_tm(&mut self, direction: Rotate) {
