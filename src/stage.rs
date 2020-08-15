@@ -1,5 +1,5 @@
 use super::tetrimino;
-use rand::prelude::*;
+use rand;
 use std::io::Write;
 use termion::clear;
 use termion::cursor;
@@ -204,6 +204,18 @@ impl Stage {
     }
     fn next(&mut self) {
         self.area = self.area_state;
+        
+        let mut clear_index = vec![];
+        for (i, line) in self.area.iter().enumerate() {
+            if line.iter().all(|&v| v) {
+                clear_index.push(i);
+            };
+        }
+        for i in clear_index {
+            self.area[i] = [false; 10];
+            // 行ずらししょり
+        }
+        // だめなら終わる
         let rand = rand::random::<u8>();
         match rand % 7 {
             0 => self.insert_tm(tetrimino::Tetrimino::i_tetrimino()),
