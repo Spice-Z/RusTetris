@@ -204,17 +204,22 @@ impl Stage {
     }
     fn next(&mut self) {
         self.area = self.area_state;
-        
         let mut clear_index = vec![];
         for (i, line) in self.area.iter().enumerate() {
             if line.iter().all(|&v| v) {
                 clear_index.push(i);
             };
         }
+        let mut next_area = self.area;
         for i in clear_index {
-            self.area[i] = [false; 10];
-            // 行ずらししょり
+            for t in 0..i {
+                if t < 19 {
+                    next_area[t + 1] = self.area[t];
+                }
+            }
+            self.area = next_area;
         }
+
         // だめなら終わる
         let rand = rand::random::<u8>();
         match rand % 7 {
